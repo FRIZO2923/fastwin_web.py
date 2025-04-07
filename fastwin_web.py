@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 from datetime import datetime, timedelta
+import pytz
 
 # --- Page Config ---
 st.set_page_config(page_title="Frizo Fast-Parity", layout="centered")
@@ -13,19 +14,24 @@ if "page" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 if "period" not in st.session_state:
-    st.session_state.period = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+    ist = pytz.timezone('Asia/Kolkata')
+    st.session_state.period = int(datetime.now(ist).strftime("%Y%m%d%H%M"))
 if "countdown" not in st.session_state:
     st.session_state.countdown = 60
 if "user_bet" not in st.session_state:
     st.session_state.user_bet = None
 if "bet_amount" not in st.session_state:
     st.session_state.bet_amount = 10
+if "bet_number" not in st.session_state:
+    st.session_state.bet_number = 1
+if "bet_popup" not in st.session_state:
+    st.session_state.bet_popup = None
 if "last_update" not in st.session_state:
-    st.session_state.last_update = datetime.now()
+    st.session_state.last_update = datetime.now(pytz.timezone('Asia/Kolkata'))
 
 # --- Timer Logic ---
 def update_timer():
-    now = datetime.now()
+    now = datetime.now(pytz.timezone('Asia/Kolkata'))
     elapsed = (now - st.session_state.last_update).seconds
     if elapsed >= 1:
         st.session_state.countdown -= elapsed
@@ -33,8 +39,9 @@ def update_timer():
         if st.session_state.countdown <= 0:
             resolve_round()
             st.session_state.countdown = 60
-            st.session_state.period += 1
+            st.session_state.period = int(datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y%m%d%H%M"))
             st.session_state.user_bet = None
+            st.session_state.bet_popup = None
 
 # --- Game Logic ---
 def resolve_round():
@@ -80,22 +87,41 @@ st.markdown("### Join Bet")
 col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("🟢 Join Green (1:2)"):
-        st.session_state.user_bet = "Green"
+        st.session_state.bet_popup = "Green"
 with col2:
     if st.button("🟣 Join Violet (1:4.5)"):
-        st.session_state.user_bet = "Violet"
+        st.session_state.bet_popup = "Violet"
 with col3:
     if st.button("🔴 Join Red (1:2)"):
-        st.session_state.user_bet = "Red"
+        st.session_state.bet_popup = "Red"
 
-st.markdown("### Select Amount")
-amount_col = st.columns(5)
-amounts = [1, 2, 5, 10, 20]
-for i, col in enumerate(amount_col):
-    if col.button(str(amounts[i])):
-        st.session_state.bet_amount = amounts[i]
+# --- Bet Popup ---
+if st.session_state.bet_popup:
+    st.markdown(f"## Join {st.session_state.bet_popup}")
+    st.markdown(f"### 💰 Coins: {st.session_state.coins}")
 
-st.info(f"Selected Bet: {st.session_state.user_bet} | Amount: ₹{st.session_state.bet_amount}")
+    bet_amt_col = st.columns(4)
+    for i, amt in enumerate([10, 100, 1000, 10000]):
+        if bet_amt_col[i].button(str(amt)):
+            st.session_state.bet_amount = amt
+
+    num_col1, num_col2, num_center, num_col3, num_col4 = st.columns(5)
+    if num_col1.button("-5"):
+        st.session_state.bet_number = max(1, st.session_state.bet_number - 5)
+    if num_col2.button("-1"):
+        st.session_state.bet_number = max(1, st.session_state.bet_number - 1)
+    num_center.markdown(f"### {st.session_state.bet_number}")
+    if num_col3.button("+1"):
+        st.session_state.bet_number = min(999, st.session_state.bet_number + 1)
+    if num_col4.button("+5"):
+        st.session_state.bet_number = min(999, st.session_state.bet_number + 5)
+
+    total_contract = st.session_state.bet_amount * st.session_state.bet_number
+    st.markdown(f"**Total contract money is ₹{total_contract}**")
+
+    if st.button("✅ Confirm"):
+        st.session_state.user_bet = st.session_state.bet_popup
+        st.session_state.bet_popup = None
 
 # --- Record History ---
 st.markdown("### Fast-Parity Record(s)")
