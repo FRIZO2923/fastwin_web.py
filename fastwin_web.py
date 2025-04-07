@@ -42,6 +42,12 @@ if tab == "Home":
     st.markdown(f"### 💰 Balance: ₹{st.session_state.balance:.2f}")
     st.write("Enjoy games like Fast-Parity and more coming soon.")
 
+    st.write("### Recharge Your Wallet")
+    recharge_amount = st.number_input("Enter amount to recharge", min_value=10, max_value=10000, step=10)
+    if st.button("Recharge Now"):
+        st.session_state.balance += recharge_amount
+        st.success(f"₹{recharge_amount} added to your balance!")
+
 elif tab == "Fast-Parity":
     period, countdown = get_current_ist_period()
 
