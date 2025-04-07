@@ -1,49 +1,115 @@
 import streamlit as st
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- Page Config ---
-st.set_page_config(page_title="Frizo Fastwin", layout="centered")
+st.set_page_config(page_title="Frizo Fast-Parity", layout="centered")
 
 # --- Session State ---
 if "coins" not in st.session_state:
     st.session_state.coins = 100
 if "page" not in st.session_state:
     st.session_state.page = "home"
-if "last_round" not in st.session_state:
-    st.session_state.last_round = datetime.now()
-if "result" not in st.session_state:
-    st.session_state.result = None
-if "choice" not in st.session_state:
-    st.session_state.choice = None
 if "history" not in st.session_state:
     st.session_state.history = []
+if "period" not in st.session_state:
+    st.session_state.period = int(datetime.now().strftime("%Y%m%d%H%M%S"))
+if "countdown" not in st.session_state:
+    st.session_state.countdown = 60
+if "user_bet" not in st.session_state:
+    st.session_state.user_bet = None
+if "bet_amount" not in st.session_state:
+    st.session_state.bet_amount = 10
+if "last_update" not in st.session_state:
+    st.session_state.last_update = datetime.now()
 
-# --- Styling ---
+# --- Timer Logic ---
+def update_timer():
+    now = datetime.now()
+    elapsed = (now - st.session_state.last_update).seconds
+    if elapsed >= 1:
+        st.session_state.countdown -= elapsed
+        st.session_state.last_update = now
+        if st.session_state.countdown <= 0:
+            resolve_round()
+            st.session_state.countdown = 60
+            st.session_state.period += 1
+            st.session_state.user_bet = None
+
+# --- Game Logic ---
+def resolve_round():
+    result_number = random.randint(0, 9)
+    if result_number in [1, 3, 7, 9]:
+        result_color = "Red"
+    elif result_number in [0, 2, 4, 6, 8]:
+        result_color = "Green"
+    else:
+        result_color = "Violet"
+
+    win = st.session_state.user_bet == result_color
+    outcome = "Win" if win else "Lose"
+
+    if win:
+        if result_color == "Violet":
+            payout = st.session_state.bet_amount * 4.5
+        else:
+            payout = st.session_state.bet_amount * 2
+        st.session_state.coins += payout
+    else:
+        st.session_state.coins -= st.session_state.bet_amount
+
+    st.session_state.history.insert(0, {
+        "period": st.session_state.period,
+        "number": result_number,
+        "color": result_color,
+        "outcome": outcome
+    })
+
+# --- Update timer ---
+update_timer()
+
+# --- UI ---
+st.title("Fast-Parity")
+
+col1, col2 = st.columns(2)
+col1.markdown(f"**Period**: {st.session_state.period}")
+col2.markdown(f"**Countdown**: {st.session_state.countdown:02d}s")
+
+# --- Betting Buttons ---
+st.markdown("### Join Bet")
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("🟢 Join Green (1:2)"):
+        st.session_state.user_bet = "Green"
+with col2:
+    if st.button("🟣 Join Violet (1:4.5)"):
+        st.session_state.user_bet = "Violet"
+with col3:
+    if st.button("🔴 Join Red (1:2)"):
+        st.session_state.user_bet = "Red"
+
+st.markdown("### Select Amount")
+amount_col = st.columns(5)
+amounts = [1, 2, 5, 10, 20]
+for i, col in enumerate(amount_col):
+    if col.button(str(amounts[i])):
+        st.session_state.bet_amount = amounts[i]
+
+st.info(f"Selected Bet: {st.session_state.user_bet} | Amount: ₹{st.session_state.bet_amount}")
+
+# --- Record History ---
+st.markdown("### Fast-Parity Record(s)")
+record_display = ""
+colors = {"Red": "🔴", "Green": "🟢", "Violet": "🟣"}
+for item in st.session_state.history[:12]:
+    color = colors[item['color']]
+    record_display += f"<span style='font-size:24px; margin:4px;'>{item['number']} {color}</span>"
+
+st.markdown(record_display, unsafe_allow_html=True)
+
+# --- Bottom Navigation ---
 st.markdown("""
 <style>
-.balance-box {
-    background: white; padding: 20px; border-radius: 15px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-bottom: 10px;
-}
-.action-btn {
-    background: #008CFF; color: white; padding: 8px 16px;
-    border: none; border-radius: 10px; font-weight: bold;
-    margin: 5px;
-}
-.gray-btn {
-    background: #eee; color: gray; padding: 8px 16px;
-    border: none; border-radius: 10px;
-}
-.grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 20px; margin-top: 20px;
-}
-.card {
-    background: white; padding: 20px; border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;
-    cursor: pointer;
-}
 .navbar {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: white; padding: 10px;
@@ -51,79 +117,6 @@ st.markdown("""
     box-shadow: 0 -1px 10px rgba(0,0,0,0.1);
 }
 </style>
-""", unsafe_allow_html=True)
-
-# --- Top Section ---
-st.markdown(f"""
-<div class="balance-box">
-    <h3>Balance: ₹{st.session_state.coins}</h3>
-    <p style='margin: 5px 0;'>ID: 1026502</p>
-    <button class='action-btn'>Recharge</button>
-    <button class='gray-btn'>Withdraw</button>
-</div>
-""", unsafe_allow_html=True)
-
-# --- Page Router ---
-if st.session_state.page == "home":
-    # Game Cards
-    st.markdown("""
-    <div class="grid">
-        <div class="card" onclick="window.location.href='/?page=fast-parity'">🔴🟢<br/>FAST PARITY</div>
-        <div class="card" onclick="window.location.href='/?page=parity'">🔴🟢<br/>PARITY</div>
-    </div>
-    """, unsafe_allow_html=True)
-    # Buttons fallback
-    if st.button("FAST PARITY"):
-        st.session_state.page = "fast-parity"
-    if st.button("PARITY"):
-        st.session_state.page = "parity"
-
-elif st.session_state.page in ["fast-parity", "parity"]:
-    st.markdown("### 🔴 RED vs 🟢 GREEN")
-    st.markdown("Predict and win! 0-49 = Red, 50-99 = Green")
-
-    bet = st.number_input("Enter bet amount:", min_value=1, max_value=st.session_state.coins, value=10)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔴 Bet on Red"):
-            st.session_state.choice = "Red"
-    with col2:
-        if st.button("🟢 Bet on Green"):
-            st.session_state.choice = "Green"
-
-    now = datetime.now()
-    if (now - st.session_state.last_round).seconds >= 60:
-        number = random.randint(0, 99)
-        result_color = "Green" if number >= 50 else "Red"
-        outcome = "Win" if st.session_state.choice == result_color else "Lose"
-
-        if outcome == "Win":
-            st.success(f"You WON! Result was {number} ({result_color})")
-            st.session_state.coins += bet
-        else:
-            st.error(f"You LOST! Result was {number} ({result_color})")
-            st.session_state.coins -= bet
-
-        st.session_state.history.insert(0, {
-            "choice": st.session_state.choice,
-            "result": number,
-            "color": result_color,
-            "outcome": outcome
-        })
-
-        st.session_state.last_round = datetime.now()
-        st.session_state.choice = None
-
-    if st.session_state.history:
-        st.markdown("### History")
-        for i, h in enumerate(st.session_state.history[:5]):
-            st.write(f"{i+1}. You chose {h['choice']} | Result: {h['result']} ({h['color']}) → {h['outcome']}")
-
-    if st.button("⬅ Back to Home"):
-        st.session_state.page = "home"
-
-# --- Bottom Nav Placeholder ---
-st.markdown("""
 <div class="navbar">
     <div>🏠<br/>Home</div>
     <div>👥<br/>Invite</div>
