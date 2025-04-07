@@ -1,100 +1,91 @@
 import streamlit as st
-import random
-from datetime import datetime, timedelta
+from streamlit.components.v1 import html
 
-# --- Session State Initialization ---
-if "coins" not in st.session_state:
-    st.session_state.coins = 100
-if "current_tab" not in st.session_state:
-    st.session_state.current_tab = "Red vs Green"
-if "bet_amount" not in st.session_state:
-    st.session_state.bet_amount = 10
-if "choice" not in st.session_state:
-    st.session_state.choice = None
-if "result" not in st.session_state:
-    st.session_state.result = None
-if "last_round_time" not in st.session_state:
-    st.session_state.last_round_time = datetime.now()
-if "history" not in st.session_state:
-    st.session_state.history = []
+# --- Page Config ---
+st.set_page_config(page_title="Fastwin Clone", layout="centered")
 
-# --- App Title ---
-st.set_page_config(page_title="Fastwin Lite", layout="centered")
-st.markdown("## 🎮 Fastwin Lite – Web Version")
+# --- Custom CSS Styling ---
+st.markdown("""
+<style>
+body { background-color: #f4f9ff; }
+.balance-box {
+    background: white; padding: 20px; border-radius: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05); margin-bottom: 10px;
+}
+.balance-box h2 { margin: 0; }
+.action-btn {
+    background: #008CFF; color: white; padding: 8px 16px;
+    border: none; border-radius: 10px; font-weight: bold;
+    margin-left: 5px; margin-right: 5px;
+}
+.gray-btn {
+    background: #eee; color: gray; padding: 8px 16px;
+    border: none; border-radius: 10px;
+}
+.grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; margin-top: 20px;
+}
+.card {
+    background: white; padding: 20px; border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;
+}
+.navbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; padding: 10px;
+    display: flex; justify-content: space-around;
+    box-shadow: 0 -1px 10px rgba(0,0,0,0.1);
+}
+</style>
+""", unsafe_allow_html=True)
 
-# --- Tabs Navigation ---
-tabs = ["Red vs Green", "Coming Soon 🎲", "Coming Soon 🎯"]
-selected_tab = st.selectbox("Choose a game", tabs, index=tabs.index(st.session_state.current_tab))
-st.session_state.current_tab = selected_tab
+# --- Top Balance Area ---
+st.markdown(f"""
+<div class="balance-box">
+    <h2>Balance: ₹0</h2>
+    <p style="margin: 5px 0;">ID: 1026502</p>
+    <button class="action-btn">Recharge</button>
+    <button class="gray-btn">Withdraw</button>
+</div>
+""", unsafe_allow_html=True)
 
-# --- Wallet Display ---
-st.markdown(f"### 💰 Coins: {st.session_state.coins}")
+# --- Mini Tasks ---
+st.markdown("""
+<div style="display: flex; justify-content: space-around; margin: 10px 0;">
+    <div style="text-align: center;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3523/3523887.png" width="40"/>
+        <p style="margin: 0;">Task reward</p>
+    </div>
+    <div style="text-align: center;">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828970.png" width="40"/>
+        <p style="margin: 0;">Check in</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# --- Timer ---
-now = datetime.now()
-time_elapsed = (now - st.session_state.last_round_time).total_seconds()
-seconds_left = int(60 - (time_elapsed % 60))
-st.markdown(f"⏱️ **Next Result In: {seconds_left} seconds**")
+# --- Banner ---
+st.image("https://i.imgur.com/4uHV4bp.png", use_column_width=True)
 
-# --- Red vs Green Game Logic ---
-if selected_tab == "Red vs Green":
-    st.markdown("### 🔴 Red vs 🟢 Green")
+# --- Game Cards ---
+st.markdown("""
+<div class="grid">
+    <div class="card">
+        <img src="https://img.icons8.com/color/96/rocket--v1.png" width="50"/>
+        <h4>FAST-PARITY</h4>
+    </div>
+    <div class="card">
+        <img src="https://img.icons8.com/fluency/96/ball.png" width="50"/>
+        <h4>PARITY</h4>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-    st.session_state.bet_amount = st.number_input(
-        "Enter your bet amount:", min_value=1,
-        max_value=st.session_state.coins, value=st.session_state.bet_amount
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔴 Bet on Red"):
-            st.session_state.choice = "Red"
-    with col2:
-        if st.button("🟢 Bet on Green"):
-            st.session_state.choice = "Green"
-
-    if time_elapsed >= 60:
-        number = random.randint(0, 99)
-        result_color = "Green" if number >= 50 else "Red"
-        st.session_state.result = result_color
-
-        outcome = ""
-        if st.session_state.choice:
-            if st.session_state.choice == result_color:
-                st.success(f"🎉 You WON! Result was {number} ({result_color})")
-                st.session_state.coins += st.session_state.bet_amount
-                outcome = "Win"
-            else:
-                st.error(f"😞 You LOST! Result was {number} ({result_color})")
-                st.session_state.coins -= st.session_state.bet_amount
-                outcome = "Lose"
-
-            # Add to history
-            st.session_state.history.insert(0, {
-                "choice": st.session_state.choice,
-                "bet": st.session_state.bet_amount,
-                "result": number,
-                "color": result_color,
-                "outcome": outcome
-            })
-
-            # Reset
-            st.session_state.choice = None
-            st.session_state.last_round_time = datetime.now()
-
-    # --- History ---
-    if st.session_state.history:
-        st.markdown("### 📜 Result History")
-        for i, round in enumerate(st.session_state.history[:5]):
-            st.write(
-                f"{i+1}. You chose {round['choice']} | Bet: {round['bet']} | "
-                f"Result: {round['result']} ({round['color']}) → {round['outcome']}"
-            )
-
-    if st.session_state.coins <= 0:
-        st.warning("🚫 You are out of coins! Please refresh to restart.")
-
-# --- Placeholder Tabs ---
-else:
-    st.info("🚧 This game mode is under development. Stay tuned!")
-
+# --- Bottom Nav ---
+st.markdown("""
+<div class="navbar">
+    <div>🏠<br/>Home</div>
+    <div>👥<br/>Invite</div>
+    <div>💰<br/>Recharge</div>
+    <div>👤<br/>Profile</div>
+</div>
+""", unsafe_allow_html=True)
