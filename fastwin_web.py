@@ -63,9 +63,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- Banner ---
-st.image("https://i.imgur.com/4uHV4bp.png", use_column_width=True)
-
 # --- Game Cards ---
 st.markdown("""
 <div class="grid">
