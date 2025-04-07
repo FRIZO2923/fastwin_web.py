@@ -5,7 +5,7 @@ import pytz
 
 # --- Session Setup ---
 if "balance" not in st.session_state:
-    st.session_state.balance = 100
+    st.session_state.balance = 1000
 
 if "fast_parity_bets" not in st.session_state:
     st.session_state.fast_parity_bets = []
