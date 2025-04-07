@@ -96,24 +96,31 @@ elif tab == "Fast-Parity":
     for b in reversed(st.session_state.fast_parity_bets[-5:]):
         st.write(f"Period {b['period']} - {b['choice']} | ₹{b['amount']} | Number: {b['number']}")
 
-    # --- Auto-generate result every minute (for simulation only) ---
-    if countdown == 1:
-        num = get_random_result()
-        color = determine_color(num)
-        st.session_state.fast_parity_results.append({
-            "period": period,
-            "number": num,
-            "color": color
-        })
+    # --- Result Generation on Period Change ---
+if "last_period" not in st.session_state:
+    st.session_state.last_period = period
 
-        # --- Payout simulation (simple logic) ---
-        for bet in st.session_state.fast_parity_bets:
-            if bet["period"] == period:
-                if color == bet["choice"]:
-                    multiplier = 2 if color in ["Red", "Green"] else 4.5
-                    winnings = int(bet["amount"] * multiplier)
-                    st.session_state.balance += winnings
-                    st.toast(f"🎉 You won ₹{winnings} on {color}!")
+if period != st.session_state.last_period:
+    num = get_random_result()
+    color = determine_color(num)
+
+    st.session_state.fast_parity_results.append({
+        "period": st.session_state.last_period,
+        "number": num,
+        "color": color
+    })
+
+    # --- Payout simulation ---
+    for bet in st.session_state.fast_parity_bets:
+        if bet["period"] == st.session_state.last_period:
+            if color == bet["choice"]:
+                multiplier = 2 if color in ["Red", "Green"] else 4.5
+                winnings = int(bet["amount"] * multiplier)
+                st.session_state.balance += winnings
+                st.toast(f"🎉 You won ₹{winnings} on {color}!")
+
+    st.session_state.fast_parity_bets = []
+    st.session_state.last_period = period
 
         # Clear period bets
         st.session_state.fast_parity_bets = []
