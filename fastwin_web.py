@@ -1,4 +1,4 @@
-import streamlit as st
+""import streamlit as st
 import random
 from datetime import datetime, timedelta
 import pytz
@@ -12,6 +12,15 @@ if "fast_parity_bets" not in st.session_state:
 
 if "fast_parity_results" not in st.session_state:
     st.session_state.fast_parity_results = []
+
+if "last_period" not in st.session_state:
+    st.session_state.last_period = None
+
+if "forced_result" not in st.session_state:
+    st.session_state.forced_result = None
+
+if "admin_enabled" not in st.session_state:
+    st.session_state.admin_enabled = False
 
 # --- Utility Functions ---
 def get_current_ist_period():
@@ -85,23 +94,32 @@ elif tab == "Fast-Parity":
             else:
                 st.error("Insufficient balance!")
 
-    # --- Result Generation on Period Change ---
-    if "last_period" not in st.session_state:
-        st.session_state.last_period = period
+    # --- Admin Panel ---
+    with st.expander("🛠 Admin Control Panel"):
+        password = st.text_input("Enter admin password", type="password")
+        if password == "yoursecret123":
+            st.session_state.admin_enabled = True
+        if st.session_state.admin_enabled:
+            forced_num = st.number_input("Force Result Number (0–9)", 0, 9, step=1)
+            if st.checkbox("✅ Force this result for next period"):
+                st.session_state.forced_result = forced_num
+                st.success(f"Next result will be forced as {forced_num}")
+        else:
+            st.warning("Access denied. Incorrect password.")
 
-    if period != st.session_state.last_period:
-        result_number = get_random_result()
+    # --- Result Generation on Period Change ---
+    if st.session_state.last_period != period:
+        result_number = st.session_state.forced_result if st.session_state.forced_result is not None else get_random_result()
         result_color = determine_color(result_number)
 
         st.session_state.fast_parity_results.append({
-            "period": st.session_state.last_period,
+            "period": st.session_state.last_period if st.session_state.last_period else period,
             "number": result_number,
             "color": result_color
         })
 
-        # Payout logic
         for bet in st.session_state.fast_parity_bets:
-            if bet["period"] == st.session_state.last_period:
+            if bet["period"] == (st.session_state.last_period if st.session_state.last_period else period):
                 if result_color == bet["choice"]:
                     multiplier = 2 if result_color in ["Red", "Green"] else 4.5
                     winnings = int(bet["amount"] * multiplier)
@@ -110,12 +128,13 @@ elif tab == "Fast-Parity":
 
         st.session_state.fast_parity_bets = []
         st.session_state.last_period = period
+        st.session_state.forced_result = None
 
     st.markdown("---")
     st.write("### 🎯 Latest Result")
     if len(st.session_state.fast_parity_results) > 0:
         last = st.session_state.fast_parity_results[-1]
-        st.info(f"Result for Period {last['period']}: Number = {last['number']} | Color = {last['color']}")
+        st.success(f"Result for Period {last['period']}: Number = {last['number']} | Color = {last['color']}")
 
     st.markdown("---")
     st.write("### 📜 Bet History")
